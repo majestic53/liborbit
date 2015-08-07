@@ -100,7 +100,7 @@ namespace ORBIT {
 		SERIALIZE_CALL_RECUR(m_lock);
 
 		result << "[" << (m_initialized ? "INIT" : "UNINIT") << "] " 
-<< ORBIT_HEADER;
+			<< ORBIT_HEADER;
 
 		if(verbose) {
 			result << " (" << VALUE_AS_HEX(uintptr_t, this) << ")";
