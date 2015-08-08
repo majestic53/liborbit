@@ -128,9 +128,8 @@ namespace ORBIT {
 
 		_orbit_uid_class::~_orbit_uid_class(void)
 		{
-			orbit_uid_factory_ptr fact = NULL;
+			orbit_uid_factory_ptr fact = orbit::acquire()->acquire_uid_factory();
 
-			fact = orbit::acquire()->acquire_uid_factory();
 			if(fact->is_initialized() 
 					&& fact->contains(*this)) {
 				fact->decrement_reference(*this);
