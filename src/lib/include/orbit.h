@@ -31,6 +31,15 @@
 
 using namespace ORBIT;
 
+#ifndef COMPONENT
+#define COMPONENT comp_ns
+#endif // COMPONENT
+
+#include "orbit_uid.h"
+#include "orbit_socket.h"
+
+using namespace ORBIT::COMPONENT;
+
 namespace ORBIT {
 
 	typedef class _orbit {

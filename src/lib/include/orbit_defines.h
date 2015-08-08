@@ -49,11 +49,12 @@ namespace ORBIT {
 	#endif // __inout_opt
 
 	#define EMPTY "EMPTY"
+	#define REFERENCE_INIT 1
 	#define UNKNOWN "UNKNOWN"
 
 	#define VERSION_MAJ 0
 	#define VERSION_MIN 1
-	#define VERSION_REV 1
+	#define VERSION_REV 2
 	#define VERSION_WEEK 1532
 
 	#define CHECK_STR(_STRING_) \

@@ -28,11 +28,11 @@ all: build archive
 archive:
 	@echo ''
 	@echo '--- BUILDING LIBRARY -----------------------'
-	ar rcs $(DIR_BUILD)$(LIB) $(DIR_BUILD)orbit.o $(DIR_BUILD)orbit_exception.o
+	ar rcs $(DIR_BUILD)$(LIB) $(DIR_BUILD)orbit.o $(DIR_BUILD)orbit_exception.o $(DIR_BUILD)orbit_socket.o $(DIR_BUILD)orbit_uid.o
 	@echo '--- DONE -----------------------------------'
 	@echo ''
 
-build: orbit.o orbit_exception.o
+build: orbit.o orbit_exception.o orbit_socket.o orbit_uid.o
 
 orbit.o: $(DIR_SRC)orbit.cpp $(DIR_INC)orbit.h
 	$(CC) $(CC_FLAGS) -c $(DIR_SRC)orbit.cpp -o $(DIR_BUILD)orbit.o
@@ -42,4 +42,8 @@ orbit_exception.o: $(DIR_SRC)orbit_exception.cpp $(DIR_INC)orbit_exception.h
 
 # COMPONENTS
 
-# LANGUAGE
+orbit_socket.o: $(DIR_SRC)orbit_socket.cpp $(DIR_INC)orbit_socket.h
+	$(CC) $(CC_FLAGS) -c $(DIR_SRC)orbit_socket.cpp -o $(DIR_BUILD)orbit_socket.o
+
+orbit_uid.o: $(DIR_SRC)orbit_uid.cpp $(DIR_INC)orbit_uid.h
+	$(CC) $(CC_FLAGS) -c $(DIR_SRC)orbit_uid.cpp -o $(DIR_BUILD)orbit_uid.o

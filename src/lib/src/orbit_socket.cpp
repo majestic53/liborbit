@@ -17,34 +17,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../lib/include/orbit.h"
+#include "../include/orbit.h"
+#include "../include/orbit_socket_type.h"
 
-int 
-main(void)
-{
-	int result = 0;
-	orbit_ptr inst = NULL;
+namespace ORBIT {
 
-	std::cout << "ORBIT " << orbit::version() << std::endl 
-		<< "Copyright (C) 2015 David Jolly" << std::endl << std::endl;
-
-	try {
-		inst = orbit::acquire();
-		std::cout << inst->to_string(true) << std::endl;
-		inst->initialize();
-		std::cout << inst->to_string(true) << std::endl;
-		inst->uninitialize();
-		std::cout << inst->to_string(true) << std::endl;
+	namespace COMPONENT {
 
 		// TODO
-
-		orbit_uid uid(100);
-		std::cout << uid.to_string() << std::endl;
-
-	} catch(orbit_exception &exc) {
-		std::cerr << exc.what() << std::endl;
-		result = -1;
 	}
-
-	return result;
 }
