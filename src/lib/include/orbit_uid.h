@@ -85,6 +85,37 @@ namespace ORBIT {
 			__in const _orbit_uid &right
 			);
 
+		typedef class _orbit_uid_class :
+				public orbit_uid {
+
+			public:
+
+				_orbit_uid_class(void);
+
+				_orbit_uid_class(
+					__in const _orbit_uid_class &other
+					);
+
+				virtual ~_orbit_uid_class(void);
+
+				_orbit_uid_class &operator=(
+					__in const _orbit_uid_class &other
+					);
+
+				bool contains(void);
+
+				size_t decrement_reference(void);
+
+				size_t increment_reference(void);
+
+				size_t reference_count(void);
+
+			private:
+
+				std::recursive_mutex m_lock;
+
+		} orbit_uid_class, *orbit_uid_class_ptr;
+
 		typedef class _orbit_uid_factory {
 
 			public:
@@ -101,9 +132,7 @@ namespace ORBIT {
 					__in const orbit_uid &uid
 					);
 
-				orbit_uid generate(
-					__out size_t &reference
-					);
+				orbit_uid generate(void);
 
 				size_t increment_reference(
 					__in const orbit_uid &uid

@@ -50,6 +50,8 @@ namespace ORBIT {
 
 			static _orbit *acquire(void);
 
+			orbit_uid_factory_ptr acquire_uid_factory(void);
+
 			void initialize(void);
 
 			static bool is_allocated(void);
@@ -77,6 +79,8 @@ namespace ORBIT {
 				);
 
 			static void _delete(void);
+
+			orbit_uid_factory_ptr m_factory_uid;
 
 			bool m_initialized;
 

@@ -38,9 +38,6 @@ main(void)
 
 		// TODO
 
-		orbit_uid uid(100);
-		std::cout << uid.to_string() << std::endl;
-
 	} catch(orbit_exception &exc) {
 		std::cerr << exc.what() << std::endl;
 		result = -1;

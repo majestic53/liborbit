@@ -108,6 +108,88 @@ namespace ORBIT {
 			return (left.m_uid < right.m_uid);
 		}
 
+		_orbit_uid_class::_orbit_uid_class(void) :
+			orbit_uid(orbit::acquire()->acquire_uid_factory()->generate())
+		{
+			return;
+		}
+
+		_orbit_uid_class::_orbit_uid_class(
+			__in const _orbit_uid_class &other
+			) :
+				orbit_uid(other)
+		{
+			orbit_uid_factory_ptr fact = orbit::acquire()->acquire_uid_factory();
+
+			if(fact->contains(*this)) {
+				fact->increment_reference(*this);
+			}
+		}
+
+		_orbit_uid_class::~_orbit_uid_class(void)
+		{
+			orbit_uid_factory_ptr fact = NULL;
+
+			fact = orbit::acquire()->acquire_uid_factory();
+			if(fact->is_initialized() 
+					&& fact->contains(*this)) {
+				fact->decrement_reference(*this);
+			}
+		}
+
+		_orbit_uid_class &
+		_orbit_uid_class::operator=(
+			__in const _orbit_uid_class &other
+			)
+		{
+			orbit_uid_factory_ptr fact = orbit::acquire()->acquire_uid_factory();
+
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(this != &other) {
+
+				if(fact->contains(*this)) {
+					fact->decrement_reference(*this);
+				}
+
+				orbit_uid::operator=(other);
+
+				if(fact->contains(*this)) {
+					fact->increment_reference(*this);
+				}
+			}
+
+			return *this;
+		}
+
+		bool 
+		_orbit_uid_class::contains(void)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+			return orbit::acquire()->acquire_uid_factory()->contains(*this);
+		}
+
+		size_t 
+		_orbit_uid_class::decrement_reference(void)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+			return orbit::acquire()->acquire_uid_factory()->decrement_reference(*this);
+		}
+
+		size_t 
+		_orbit_uid_class::increment_reference(void)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+			return orbit::acquire()->acquire_uid_factory()->increment_reference(*this);
+		}
+
+		size_t 
+		_orbit_uid_class::reference_count(void)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+			return orbit::acquire()->acquire_uid_factory()->reference_count(*this);
+		}
+
 		orbit_uid_factory_ptr orbit_uid_factory::m_instance = NULL;
 
 		_orbit_uid_factory::_orbit_uid_factory(void) :
@@ -210,9 +292,7 @@ namespace ORBIT {
 		}
 
 		orbit_uid 
-		_orbit_uid_factory::generate(
-			__out size_t &reference
-			)
+		_orbit_uid_factory::generate(void)
 		{
 			orbit_uid result;
 
@@ -231,8 +311,7 @@ namespace ORBIT {
 				THROW_ORBIT_UID_EXCEPTION(ORBIT_UID_EXCEPTION_INSUFFICENT);
 			}
 
-			reference = REFERENCE_INIT;
-			m_uid_map.insert(std::pair<orbit_uid, size_t>(result, reference));
+			m_uid_map.insert(std::pair<orbit_uid, size_t>(result, REFERENCE_INIT));
 
 			return result;
 		}
@@ -310,7 +389,7 @@ namespace ORBIT {
 			__in_opt bool verbose
 			)
 		{
-			size_t index = 0;
+			size_t index = 1;
 			std::stringstream result;
 			std::map<orbit_uid, size_t>::iterator iter;
 
@@ -324,8 +403,8 @@ namespace ORBIT {
 			}
 
 			for(iter = m_uid_map.begin(); iter != m_uid_map.end(); ++index, ++iter) {
-				result << std::endl << "[" << index << "/" << m_uid_map.size() << "] "
-					<< VALUE_AS_HEX(orbit_uid_t, iter->first.m_uid) << ", ref: "
+				result << std::endl << "--- [" << index << "/" << m_uid_map.size() << "] {"
+					<< VALUE_AS_HEX(orbit_uid_t, iter->first.m_uid) << "}, ref: "
 					<< iter->second;
 			}
 

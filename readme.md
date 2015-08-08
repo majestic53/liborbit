@@ -13,6 +13,10 @@ Changelog
 =========
 
 ##Version 0.1.1532
+*Updated: 8/8/2015*
+
+* Implemented UID factory (complete)
+
 *Updated: 8/7/2015*
 
 * Implemented UID factory (incomplete)
