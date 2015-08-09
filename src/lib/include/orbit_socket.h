@@ -20,11 +20,82 @@
 #ifndef ORBIT_SOCKET_H_
 #define ORBIT_SOCKET_H_
 
+#include <netdb.h>
+#include <vector>
+
 namespace ORBIT {
 
 	namespace COMPONENT {
 
-		// TODO
+		typedef enum {
+			ORBIT_SOCKET_TYPE_NONE = 0,
+			ORBIT_SOCKET_TYPE_TCP,
+			ORBIT_SOCKET_TYPE_UDP,
+		} orbit_socket_t;
+
+		#define ORBIT_SOCKET_TYPE_MAX ORBIT_SOCKET_TYPE_UDP
+
+		typedef std::vector<uint8_t> orbit_socket_buf_t;
+
+		typedef class _orbit_socket :
+				public orbit_uid_class {
+
+			public:
+
+				_orbit_socket(void);
+
+				_orbit_socket(
+					__in const _orbit_socket &other
+					);
+
+				virtual ~_orbit_socket(void);
+
+				_orbit_socket &operator=(
+					__in const _orbit_socket &other
+					);
+
+				void close(void);
+
+				bool is_open(void);
+
+				void open(
+					__in const std::string &host,
+					__in uint16_t port
+					);
+
+				size_t read(
+					__in orbit_socket_buf_t &buffer
+					);
+
+				virtual std::string to_string(
+					__in_opt bool verbose = false
+					);
+
+				orbit_socket_t type(void);
+
+				size_t write(
+					__in const orbit_socket_buf_t &buffer
+					);
+
+			protected:
+
+				sockaddr_in m_address;
+
+				std::string m_host;
+
+				hostent *m_information;
+
+				uint16_t m_port;
+
+				int m_socket;
+
+				orbit_socket_t m_type;
+
+			private:
+
+				std::recursive_mutex m_lock;
+
+		} orbit_socket, *orbit_socket_ptr;
 	}
 }
 
