@@ -13,6 +13,10 @@ Changelog
 =========
 
 ##Version 0.1.1532
+*Updated: 8/9/2015*
+
+* Implemented Socket class (TCP, IPv4/6)
+
 *Updated: 8/8/2015*
 
 * Implemented Socket class (incomplete)

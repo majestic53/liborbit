@@ -54,7 +54,7 @@ namespace ORBIT {
 
 	#define VERSION_MAJ 0
 	#define VERSION_MIN 1
-	#define VERSION_REV 3
+	#define VERSION_REV 4
 	#define VERSION_WEEK 1532
 
 	#define CHECK_STR(_STRING_) \

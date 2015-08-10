@@ -35,6 +35,13 @@ namespace ORBIT {
 
 		#define ORBIT_SOCKET_TYPE_MAX ORBIT_SOCKET_TYPE_UDP
 
+		typedef enum {
+			ORBIT_SOCKET_FAMILY_TYPE_4 = 0,
+			ORBIT_SOCKET_FAMILY_TYPE_6,
+		} orbit_socket_family_t;
+
+		#define ORBIT_SOCKET_FAMILY_TYPE_MAX ORBIT_SOCKET_FAMILY_TYPE_6
+
 		typedef std::vector<uint8_t> orbit_socket_buf_t;
 
 		typedef class _orbit_socket :
@@ -42,7 +49,10 @@ namespace ORBIT {
 
 			public:
 
-				_orbit_socket(void);
+				_orbit_socket(
+					__in_opt const std::string &host = std::string(),
+					__in_opt uint16_t port = 0
+					);
 
 				_orbit_socket(
 					__in const _orbit_socket &other
@@ -56,15 +66,20 @@ namespace ORBIT {
 
 				void close(void);
 
+				orbit_socket_family_t family(void);
+
 				bool is_open(void);
 
-				void open(
+				void open_tcp(void);
+
+				void open_tcp(
 					__in const std::string &host,
 					__in uint16_t port
 					);
 
-				size_t read(
-					__in orbit_socket_buf_t &buffer
+				int read(
+					__in orbit_socket_buf_t &buffer,
+					__in size_t size
 					);
 
 				virtual std::string to_string(
@@ -73,17 +88,19 @@ namespace ORBIT {
 
 				orbit_socket_t type(void);
 
-				size_t write(
+				int write(
 					__in const orbit_socket_buf_t &buffer
 					);
 
 			protected:
 
-				sockaddr_in m_address;
+				sockaddr_in m_address_4;
+
+				sockaddr_in6 m_address_6;
 
 				std::string m_host;
 
-				hostent *m_information;
+				addrinfo *m_information;
 
 				uint16_t m_port;
 

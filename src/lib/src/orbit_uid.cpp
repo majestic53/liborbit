@@ -87,7 +87,7 @@ namespace ORBIT {
 			SERIALIZE_CALL_RECUR(m_lock);
 			UNREFERENCE_PARAM(verbose);
 
-			result << VALUE_AS_HEX(orbit_uid_t, m_uid);
+			result << "{" << VALUE_AS_HEX(orbit_uid_t, m_uid) << "}";
 
 			return CHECK_STR(result.str());
 		}
