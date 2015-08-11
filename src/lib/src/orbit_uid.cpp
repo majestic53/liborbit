@@ -250,7 +250,7 @@ namespace ORBIT {
 				THROW_ORBIT_UID_EXCEPTION(ORBIT_UID_EXCEPTION_UNINITIALIZE);
 			}
 
-			return (m_uid_map.find(uid) != m_uid_map.end());
+			return (m_map_uid.find(uid) != m_map_uid.end());
 		}
 
 		size_t 
@@ -270,8 +270,8 @@ namespace ORBIT {
 			iter = find(uid);
 			result = --iter->second;
 			if(result < REFERENCE_INIT) {
-				m_uid_set.insert(iter->first.m_uid);
-				m_uid_map.erase(iter);
+				m_set_uid.insert(iter->first.m_uid);
+				m_map_uid.erase(iter);
 			}
 
 			return result;
@@ -290,8 +290,8 @@ namespace ORBIT {
 				THROW_ORBIT_UID_EXCEPTION(ORBIT_UID_EXCEPTION_UNINITIALIZE);
 			}
 
-			result = m_uid_map.find(uid);
-			if(result == m_uid_map.end()) {
+			result = m_map_uid.find(uid);
+			if(result == m_map_uid.end()) {
 				THROW_ORBIT_UID_EXCEPTION_MESSAGE(ORBIT_UID_EXCEPTION_NOT_FOUND, 
 					"{%x}", uid.m_uid);
 			}
@@ -310,16 +310,16 @@ namespace ORBIT {
 				THROW_ORBIT_UID_EXCEPTION(ORBIT_UID_EXCEPTION_UNINITIALIZE);
 			}
 
-			if(!m_uid_set.empty()) {
-				result.uid() = *m_uid_set.begin();
-				m_uid_set.erase(result.uid());
-			} else if(m_uid_next != UID_INVALID) {
-				result.uid() = m_uid_next++;
+			if(!m_set_uid.empty()) {
+				result.uid() = *m_set_uid.begin();
+				m_set_uid.erase(result.uid());
+			} else if(m_next_uid != UID_INVALID) {
+				result.uid() = m_next_uid++;
 			} else {
 				THROW_ORBIT_UID_EXCEPTION(ORBIT_UID_EXCEPTION_INSUFFICENT);
 			}
 
-			m_uid_map.insert(std::pair<orbit_uid, size_t>(result, REFERENCE_INIT));
+			m_map_uid.insert(std::pair<orbit_uid, size_t>(result, REFERENCE_INIT));
 
 			return result;
 		}
@@ -348,9 +348,9 @@ namespace ORBIT {
 			}
 
 			m_initialized = true;
-			m_uid_map.clear();
-			m_uid_next = 0;
-			m_uid_set.clear();
+			m_map_uid.clear();
+			m_next_uid = 0;
+			m_set_uid.clear();
 		}
 
 		bool 
@@ -389,7 +389,7 @@ namespace ORBIT {
 				THROW_ORBIT_UID_EXCEPTION(ORBIT_UID_EXCEPTION_UNINITIALIZE);
 			}
 
-			return m_uid_map.size();
+			return m_map_uid.size();
 		}
 
 		std::string 
@@ -410,8 +410,8 @@ namespace ORBIT {
 				result << " (" << VALUE_AS_HEX(uintptr_t, this) << ")";
 			}
 
-			for(iter = m_uid_map.begin(); iter != m_uid_map.end(); ++index, ++iter) {
-				result << std::endl << "--- [" << index << "/" << m_uid_map.size() << "] {"
+			for(iter = m_map_uid.begin(); iter != m_map_uid.end(); ++index, ++iter) {
+				result << std::endl << "--- [" << index << "/" << m_map_uid.size() << "] {"
 					<< VALUE_AS_HEX(orbit_uid_t, iter->first.m_uid) << "}, ref: "
 					<< iter->second;
 			}
@@ -428,9 +428,9 @@ namespace ORBIT {
 				THROW_ORBIT_UID_EXCEPTION(ORBIT_UID_EXCEPTION_UNINITIALIZE);
 			}
 
-			m_uid_map.clear();
-			m_uid_next = 0;
-			m_uid_set.clear();
+			m_map_uid.clear();
+			m_next_uid = 0;
+			m_set_uid.clear();
 			m_initialized = false;
 		}
 	}

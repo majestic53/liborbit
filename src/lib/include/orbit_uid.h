@@ -183,11 +183,11 @@ namespace ORBIT {
 
 				static _orbit_uid_factory *m_instance;
 
-				std::map<orbit_uid, size_t> m_uid_map;
+				std::map<orbit_uid, size_t> m_map_uid;
 
-				orbit_uid_t m_uid_next;
+				orbit_uid_t m_next_uid;
 
-				std::set<orbit_uid_t> m_uid_set;
+				std::set<orbit_uid_t> m_set_uid;
 
 			private:
 

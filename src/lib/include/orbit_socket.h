@@ -144,7 +144,7 @@ namespace ORBIT {
 					__in const orbit_uid &uid
 					);
 
-				orbit_uid generate(
+				orbit_uid generate_tcp(
 					__in_opt const std::string &host = std::string(),
 					__in_opt uint16_t port = 0
 					);
@@ -193,7 +193,7 @@ namespace ORBIT {
 
 				static _orbit_socket_factory *m_instance;
 
-				std::map<orbit_uid, std::pair<orbit_socket, size_t>> m_socket_map;
+				std::map<orbit_uid, std::pair<orbit_socket, size_t>> m_map_socket;
 
 			private:
 

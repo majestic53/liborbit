@@ -536,7 +536,7 @@ namespace ORBIT {
 				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
 			}
 
-			return (m_socket_map.find(uid) != m_socket_map.end());
+			return (m_map_socket.find(uid) != m_map_socket.end());
 		}
 
 		size_t 
@@ -557,7 +557,7 @@ namespace ORBIT {
 
 			result = --iter->second.second;
 			if(result < REFERENCE_INIT) {
-				m_socket_map.erase(iter);
+				m_map_socket.erase(iter);
 			}
 
 			return result;
@@ -576,8 +576,8 @@ namespace ORBIT {
 				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
 			}
 
-			result = m_socket_map.find(uid);
-			if(result == m_socket_map.end()) {
+			result = m_map_socket.find(uid);
+			if(result == m_map_socket.end()) {
 				THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_NOT_FOUND,
 					"%s", CHECK_STR(orbit_uid::as_string(uid)));
 			}
@@ -586,7 +586,7 @@ namespace ORBIT {
 		}
 
 		orbit_uid 
-		_orbit_socket_factory::generate(
+		_orbit_socket_factory::generate_tcp(
 			__in_opt const std::string &host,
 			__in_opt uint16_t port
 			)
@@ -601,7 +601,7 @@ namespace ORBIT {
 
 			orbit_socket sock(host, port);
 			result = sock.uid();
-			m_socket_map.insert(std::pair<orbit_uid, std::pair<orbit_socket, size_t>>(
+			m_map_socket.insert(std::pair<orbit_uid, std::pair<orbit_socket, size_t>>(
 				result, std::pair<orbit_socket, size_t>(sock, REFERENCE_INIT)));
 
 			return result;
@@ -631,7 +631,7 @@ namespace ORBIT {
 			}
 
 			m_initialized = true;
-			m_socket_map.clear();
+			m_map_socket.clear();
 		}
 
 		bool 
@@ -670,7 +670,7 @@ namespace ORBIT {
 				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
 			}
 
-			return m_socket_map.size();
+			return m_map_socket.size();
 		}
 
 		std::string 
@@ -691,8 +691,8 @@ namespace ORBIT {
 				result << " (" << VALUE_AS_HEX(uintptr_t, this) << ")";
 			}
 
-			for(iter = m_socket_map.begin(); iter != m_socket_map.end(); ++index, ++iter) {
-				result << std::endl << "--- [" << index << "/" << m_socket_map.size() << "] "
+			for(iter = m_map_socket.begin(); iter != m_map_socket.end(); ++index, ++iter) {
+				result << std::endl << "--- [" << index << "/" << m_map_socket.size() << "] "
 					<< iter->second.first.to_string(verbose) << ", ref: "
 					<< iter->second.second;
 			}
@@ -709,7 +709,7 @@ namespace ORBIT {
 				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
 			}
 
-			m_socket_map.clear();
+			m_map_socket.clear();
 			m_initialized =false;
 		}
 	}
