@@ -12,6 +12,12 @@ Table of Contents
 Changelog
 =========
 
+##Version 0.1.1533
+*Updated: 8/10/2015*
+
+* Implemented Socket factory class
+* Tested socket class
+
 ##Version 0.1.1532
 *Updated: 8/9/2015*
 

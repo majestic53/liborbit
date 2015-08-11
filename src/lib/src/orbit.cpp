@@ -25,6 +25,7 @@ namespace ORBIT {
 	orbit_ptr orbit::m_instance = NULL;
 
 	_orbit::_orbit(void) :
+		m_factory_socket(orbit_socket_factory::acquire()),
 		m_factory_uid(orbit_uid_factory::acquire()),
 		m_initialized(false)
 	{
@@ -64,6 +65,13 @@ namespace ORBIT {
 		return orbit::m_instance;
 	}
 
+	orbit_socket_factory_ptr 
+	_orbit::acquire_socket_factory(void)
+	{
+		SERIALIZE_CALL_RECUR(m_lock);
+		return m_factory_socket;
+	}
+
 	orbit_uid_factory_ptr 
 	_orbit::acquire_uid_factory(void)
 	{
@@ -82,6 +90,7 @@ namespace ORBIT {
 
 		m_initialized = true;
 		m_factory_uid->initialize();
+		m_factory_socket->initialize();
 
 		// TODO
 	}
@@ -115,7 +124,8 @@ namespace ORBIT {
 			result << " (" << VALUE_AS_HEX(uintptr_t, this) << ")";
 		}
 
-		result << std::endl << m_factory_uid->to_string(verbose);
+		result << std::endl << m_factory_socket->to_string(verbose) 
+			<< std::endl << m_factory_uid->to_string(verbose);
 
 		// TODO
 
@@ -133,6 +143,7 @@ namespace ORBIT {
 
 		// TODO
 
+		m_factory_socket->uninitialize();
 		m_factory_uid->uninitialize();
 		m_initialized = false;
 	}

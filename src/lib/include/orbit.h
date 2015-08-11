@@ -50,6 +50,8 @@ namespace ORBIT {
 
 			static _orbit *acquire(void);
 
+			orbit_socket_factory_ptr acquire_socket_factory(void);
+
 			orbit_uid_factory_ptr acquire_uid_factory(void);
 
 			void initialize(void);
@@ -79,6 +81,8 @@ namespace ORBIT {
 				);
 
 			static void _delete(void);
+
+			orbit_socket_factory_ptr m_factory_socket;
 
 			orbit_uid_factory_ptr m_factory_uid;
 

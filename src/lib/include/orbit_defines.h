@@ -26,6 +26,7 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace ORBIT {
 
@@ -54,8 +55,8 @@ namespace ORBIT {
 
 	#define VERSION_MAJ 0
 	#define VERSION_MIN 1
-	#define VERSION_REV 4
-	#define VERSION_WEEK 1532
+	#define VERSION_REV 1
+	#define VERSION_WEEK 1533
 
 	#define CHECK_STR(_STRING_) \
 		(_STRING_.empty() ? EMPTY : _STRING_.c_str())
@@ -80,6 +81,8 @@ namespace ORBIT {
 
 	#define VERSION_STR CONCAT_STR(VERSION_MAJ) "." CONCAT_STR(VERSION_MIN) \
 		"." CONCAT_STR(VERSION_WEEK) "." CONCAT_STR(VERSION_REV)
+
+	typedef std::vector<uint8_t> orbit_buf_t;
 }
 
 #endif // ORBIT_DEFINES_H_

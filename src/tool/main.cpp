@@ -32,15 +32,12 @@ main(void)
 		inst = orbit::acquire();
 		//std::cout << inst->to_string(true) << std::endl;
 		inst->initialize();
-		
-		// TODO
-		orbit_socket sock;
-		std::cout << sock.to_string(true) << std::endl;
-		// ---
+		std::cout << inst->to_string(true) << std::endl;
 
-		//std::cout << inst->to_string(true) << std::endl;
+		// TODO
+
 		inst->uninitialize();
-		//std::cout << inst->to_string(true) << std::endl;
+		std::cout << inst->to_string(true) << std::endl;
 	} catch(orbit_exception &exc) {
 		std::cerr << exc.what() << std::endl;
 		result = -1;

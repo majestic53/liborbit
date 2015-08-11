@@ -29,6 +29,7 @@ namespace ORBIT {
 
 	namespace COMPONENT {
 
+		#define SOCKET_BLOCK_READ_LEN 0x2000
 		#define SOCKET_ADDR_STR_MAX 80
 
 		static const std::string ORBIT_SOCKET_TYPE_STR[] = {
@@ -40,7 +41,7 @@ namespace ORBIT {
 			CHECK_STR(ORBIT_SOCKET_TYPE_STR[_TYPE_]))
 
 		static const std::string ORBIT_SOCKET_FAMILY_TYPE_STR[] = {
-			"IPv4", "IPv6",
+			"NONE", "IPV4", "IPV6",
 			};
 
 		#define ORBIT_SOCKET_FAMILY_TYPE_STRING(_TYPE_) \
@@ -116,6 +117,44 @@ namespace ORBIT {
 			return *this;
 		}
 
+		std::string 
+		_orbit_socket::address(void)
+		{
+			void *addr = NULL;
+			std::string result;
+
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_socket) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_CLOSE);
+			}
+
+			if(m_information) {
+
+				switch(m_information->ai_family) {
+					case AF_INET:
+						addr = &((sockaddr_in *) m_information->ai_addr)->sin_addr;
+						break;
+					case AF_INET6:
+						addr = &((sockaddr_in6 *) m_information->ai_addr)->sin6_addr;
+						break;
+					default:
+						THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_TYPE_INET,
+							"%i", m_information->ai_family);
+				}
+
+				result.resize(SOCKET_ADDR_STR_MAX);
+
+				if(!inet_ntop(m_information->ai_family, addr, (char *) &result[0], 
+						SOCKET_ADDR_STR_MAX)) {
+					THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_INTERNAL,
+						"[%s] %s", CONCAT_STR(inet_ntop), strerror(errno));
+				}
+			}
+
+			return CHECK_STR(result);
+		}
+
 		void 
 		_orbit_socket::close(void)
 		{
@@ -150,7 +189,7 @@ namespace ORBIT {
 		orbit_socket_family_t 
 		_orbit_socket::family(void)
 		{
-			orbit_socket_family_t result = INVALID_TYPE(orbit_socket_family_t);
+			orbit_socket_family_t result = ORBIT_SOCKET_FAMILY_TYPE_NONE;
 
 			SERIALIZE_CALL_RECUR(m_lock);
 
@@ -158,16 +197,19 @@ namespace ORBIT {
 				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_CLOSE);
 			}
 
-			switch(m_information->ai_family) {
-				case AF_INET:
-					result = ORBIT_SOCKET_FAMILY_TYPE_4;
-					break;
-				case AF_INET6:
-					result = ORBIT_SOCKET_FAMILY_TYPE_6;
-					break;
-				default:
-					THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_TYPE_INET,
-						"%i", m_information->ai_family);
+			if(m_information) {
+
+				switch(m_information->ai_family) {
+					case AF_INET:
+						result = ORBIT_SOCKET_FAMILY_TYPE_IPV4;
+						break;
+					case AF_INET6:
+						result = ORBIT_SOCKET_FAMILY_TYPE_IPV6;
+						break;
+					default:
+						THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_TYPE_INET,
+							"%i", m_information->ai_family);
+				}
 			}
 
 			return result;
@@ -206,15 +248,11 @@ namespace ORBIT {
 				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_OPEN);
 			}
 
+			memset(&m_address_4, 0, sizeof(sockaddr_in));
+			memset(&m_address_6, 0, sizeof(sockaddr_in6));
 			m_host = host;
 			m_port = port;
 			m_type = ORBIT_SOCKET_TYPE_TCP;
-
-			m_socket = ::socket(AF_INET, SOCK_STREAM, 0);
-			if(m_socket) {
-				THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_INTERNAL,
-					"[%s] %s", CONCAT_STR(::socket), strerror(errno));
-			}
 
 			result = getaddrinfo(CHECK_STR(host), NULL, NULL, &m_information);
 			if(result) {
@@ -222,8 +260,11 @@ namespace ORBIT {
 					"[%s] %s", CONCAT_STR(getaddrinfo), gai_strerror(result));
 			}
 
-			memset(&m_address_4, 0, sizeof(sockaddr_in));
-			memset(&m_address_6, 0, sizeof(sockaddr_in6));
+			m_socket = ::socket(m_information->ai_family, SOCK_STREAM, 0);
+			if(!m_socket) {
+				THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_INTERNAL,
+					"[%s] %s", CONCAT_STR(::socket), strerror(errno));
+			}
 
 			switch(m_information->ai_family) {
 				case AF_INET:
@@ -256,13 +297,26 @@ namespace ORBIT {
 			}
 		}
 
+		uint16_t 
+		_orbit_socket::port(void)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_socket) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_CLOSE);
+			}
+
+			return m_port;	
+		}
+
 		int 
 		_orbit_socket::read(
-			__in orbit_socket_buf_t &buffer,
-			__in size_t size
+			__in orbit_buf_t &output
 			)
 		{
-			int result;
+			int result = 0, len;
+			bool receiving = true;
+			orbit_buf_t buffer;
 
 			SERIALIZE_CALL_RECUR(m_lock);
 
@@ -270,13 +324,42 @@ namespace ORBIT {
 				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_CLOSE);
 			}
 
-			buffer.resize(size, 0);
+			output.clear();
 
-			result = ::read(m_socket, (uint8_t *) &buffer[0], size);
-			if(result < 0) {
-				THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_INTERNAL,
-					"[%s] %s", CONCAT_STR(::read), strerror(errno));
+			while(receiving) {
+				buffer.resize(SOCKET_BLOCK_READ_LEN, 0);
+
+				len = ::recv(m_socket, (uint8_t *) &buffer[0], SOCKET_BLOCK_READ_LEN, 0);
+				if(len < 0) {
+					THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_INTERNAL,
+						"[%s] %s", CONCAT_STR(::recv), strerror(errno));
+				} else if(len) {					
+					output.insert(output.end(), buffer.begin(), buffer.begin() + len);
+					result += len;
+				} else {
+					receiving = false;
+				}
 			}
+
+			return result;
+		}
+
+		int 
+		_orbit_socket::read(
+			__in std::string &output
+			)
+		{
+			int result;
+			orbit_buf_t buffer;
+
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_socket) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_CLOSE);
+			}
+
+			result = read(buffer);
+			output = std::string(buffer.begin(), buffer.end());
 
 			return result;
 		}
@@ -291,7 +374,6 @@ namespace ORBIT {
 			std::stringstream result;
 
 			SERIALIZE_CALL_RECUR(m_lock);
-			UNREFERENCE_PARAM(verbose);
 
 			result << CHECK_STR(orbit_uid::to_string()) << " [" << ORBIT_SOCKET_TYPE_STRING(m_type) 
 				<< ", " << (m_socket ? "CONN" : "DISC");
@@ -302,7 +384,7 @@ namespace ORBIT {
 
 			result << "]";
 
-			if(m_socket) {
+			if(verbose && m_socket) {
 				result << " " << CHECK_STR(m_host);
 
 				if(m_information) {
@@ -320,13 +402,14 @@ namespace ORBIT {
 					}
 
 					addr_str.resize(SOCKET_ADDR_STR_MAX);
+
 					if(!inet_ntop(m_information->ai_family, addr, (char *) &addr_str[0], 
 							SOCKET_ADDR_STR_MAX)) {
 						THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_INTERNAL,
 							"[%s] %s", CONCAT_STR(inet_ntop), strerror(errno));
 					}
 
-					result << " (" << CHECK_STR(addr_str) << ")";
+					result << " " << CHECK_STR(addr_str);
 				}
 
 				result << ":" << m_port;
@@ -339,12 +422,17 @@ namespace ORBIT {
 		_orbit_socket::type(void)
 		{
 			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_socket) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_CLOSE);
+			}
+
 			return m_type;
 		}
 
 		int 
 		_orbit_socket::write(
-			__in const orbit_socket_buf_t &buffer
+			__in const orbit_buf_t &input
 			)
 		{
 			int result;
@@ -355,13 +443,274 @@ namespace ORBIT {
 				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_CLOSE);
 			}
 
-			result = ::write(m_socket, (uint8_t *) &buffer[0], buffer.size());
+			result = ::write(m_socket, (uint8_t *) &input[0], input.size());
 			if(result < 0) {
 				THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_INTERNAL,
 					"[%s] %s", CONCAT_STR(::write), strerror(errno));
 			}
 
 			return result;
+		}
+
+		int 
+		_orbit_socket::write(
+			__in const std::string &input
+			)
+		{
+			orbit_buf_t buffer;
+
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_socket) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_CLOSE);
+			}
+
+			buffer = orbit_buf_t(input.begin(), input.end());
+
+			return write(buffer);
+		}
+
+		orbit_socket_factory_ptr orbit_socket_factory::m_instance = NULL;
+
+		_orbit_socket_factory::_orbit_socket_factory(void) :
+			m_initialized(false)
+		{
+			std::atexit(orbit_socket_factory::_delete);
+		}
+
+		_orbit_socket_factory::~_orbit_socket_factory(void)
+		{
+
+			if(m_initialized) {
+				uninitialize();
+			}
+		}
+
+		void 
+		_orbit_socket_factory::_delete(void)
+		{
+
+			if(orbit_socket_factory::m_instance) {
+				delete orbit_socket_factory::m_instance;
+				orbit_socket_factory::m_instance = NULL;
+			}
+		}
+
+		orbit_socket_factory_ptr 
+		_orbit_socket_factory::acquire(void)
+		{
+
+			if(!orbit_socket_factory::m_instance) {
+
+				orbit_socket_factory::m_instance = new orbit_socket_factory;
+				if(!orbit_socket_factory::m_instance) {
+					THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_ALLOCATION);
+				}
+			}
+
+			return orbit_socket_factory::m_instance;
+		}
+
+		orbit_socket &
+		_orbit_socket_factory::at(
+			__in const orbit_uid &uid
+			)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
+			}
+
+			return find(uid)->second.first;
+		}
+
+		bool 
+		_orbit_socket_factory::contains(
+			__in const orbit_uid &uid
+			)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
+			}
+
+			return (m_socket_map.find(uid) != m_socket_map.end());
+		}
+
+		size_t 
+		_orbit_socket_factory::decrement_reference(
+			__in const orbit_uid &uid
+			)
+		{
+			size_t result;
+			std::map<orbit_uid, std::pair<orbit_socket, size_t>>::iterator iter;
+
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
+			}
+
+			iter = find(uid);
+
+			result = --iter->second.second;
+			if(result < REFERENCE_INIT) {
+				m_socket_map.erase(iter);
+			}
+
+			return result;
+		}
+
+		std::map<orbit_uid, std::pair<orbit_socket, size_t>>::iterator 
+		_orbit_socket_factory::find(
+			__in const orbit_uid &uid
+			)
+		{
+			std::map<orbit_uid, std::pair<orbit_socket, size_t>>::iterator result;
+
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
+			}
+
+			result = m_socket_map.find(uid);
+			if(result == m_socket_map.end()) {
+				THROW_ORBIT_SOCKET_EXCEPTION_MESSAGE(ORBIT_SOCKET_EXCEPTION_NOT_FOUND,
+					"%s", CHECK_STR(orbit_uid::as_string(uid)));
+			}
+
+			return result;
+		}
+
+		orbit_uid 
+		_orbit_socket_factory::generate(
+			__in_opt const std::string &host,
+			__in_opt uint16_t port
+			)
+		{
+			orbit_uid result;
+
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
+			}
+
+			orbit_socket sock(host, port);
+			result = sock.uid();
+			m_socket_map.insert(std::pair<orbit_uid, std::pair<orbit_socket, size_t>>(
+				result, std::pair<orbit_socket, size_t>(sock, REFERENCE_INIT)));
+
+			return result;
+		}
+
+		size_t 
+		_orbit_socket_factory::increment_reference(
+			__in const orbit_uid &uid
+			)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
+			}
+
+			return ++find(uid)->second.second;
+		}
+
+		void 
+		_orbit_socket_factory::initialize(void)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_INITIALIZE);
+			}
+
+			m_initialized = true;
+			m_socket_map.clear();
+		}
+
+		bool 
+		_orbit_socket_factory::is_allocated(void)
+		{
+			return (orbit_socket_factory::m_instance != NULL);
+		}
+
+		bool 
+		_orbit_socket_factory::is_initialized(void)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+			return m_initialized;
+		}
+
+		size_t 
+		_orbit_socket_factory::reference_count(
+			__in const orbit_uid &uid
+			)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
+			}
+
+			return find(uid)->second.second;
+		}
+
+		size_t 
+		_orbit_socket_factory::size(void)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
+			}
+
+			return m_socket_map.size();
+		}
+
+		std::string 
+		_orbit_socket_factory::to_string(
+			__in_opt bool verbose
+			)
+		{
+			size_t index = 1;
+			std::stringstream result;
+			std::map<orbit_uid, std::pair<orbit_socket, size_t>>::iterator iter;
+
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			result << "[" << (m_initialized ? "INIT" : "UNINIT") << "] " 
+				<< ORBIT_SOCKET_HEADER;
+
+			if(verbose) {
+				result << " (" << VALUE_AS_HEX(uintptr_t, this) << ")";
+			}
+
+			for(iter = m_socket_map.begin(); iter != m_socket_map.end(); ++index, ++iter) {
+				result << std::endl << "--- [" << index << "/" << m_socket_map.size() << "] "
+					<< iter->second.first.to_string(verbose) << ", ref: "
+					<< iter->second.second;
+			}
+
+			return CHECK_STR(result.str());
+		}
+
+		void 
+		_orbit_socket_factory::uninitialize(void)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+
+			if(!m_initialized) {
+				THROW_ORBIT_SOCKET_EXCEPTION(ORBIT_SOCKET_EXCEPTION_UNINITIALIZE);
+			}
+
+			m_socket_map.clear();
+			m_initialized =false;
 		}
 	}
 }

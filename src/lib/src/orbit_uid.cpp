@@ -78,18 +78,27 @@ namespace ORBIT {
 		}
 
 		std::string 
-		_orbit_uid::to_string(
+		_orbit_uid::as_string(
+			__in const _orbit_uid &uid,
 			__in_opt bool verbose
 			)
 		{
 			std::stringstream result;
 
-			SERIALIZE_CALL_RECUR(m_lock);
 			UNREFERENCE_PARAM(verbose);
 
-			result << "{" << VALUE_AS_HEX(orbit_uid_t, m_uid) << "}";
+			result << "{" << VALUE_AS_HEX(orbit_uid_t, uid.m_uid) << "}";
 
 			return CHECK_STR(result.str());
+		}
+
+		std::string 
+		_orbit_uid::to_string(
+			__in_opt bool verbose
+			)
+		{
+			SERIALIZE_CALL_RECUR(m_lock);
+			return CHECK_STR(as_string(*this, verbose));
 		}
 
 		orbit_uid_t &
@@ -284,7 +293,7 @@ namespace ORBIT {
 			result = m_uid_map.find(uid);
 			if(result == m_uid_map.end()) {
 				THROW_ORBIT_UID_EXCEPTION_MESSAGE(ORBIT_UID_EXCEPTION_NOT_FOUND, 
-					"0x%x", uid.m_uid);
+					"{%x}", uid.m_uid);
 			}
 
 			return result;

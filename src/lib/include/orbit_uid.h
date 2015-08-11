@@ -57,6 +57,11 @@ namespace ORBIT {
 					__in const _orbit_uid &other
 					);
 
+				static std::string as_string(
+					__in const _orbit_uid &uid,
+					__in_opt bool verbose = false
+					);
+
 				virtual std::string to_string(
 					__in_opt bool verbose = false
 					);
